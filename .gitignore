@@ -1,0 +1,8 @@
+.vscode
+a.out
+test*
+client
+server
+client.o
+server.o
+libft
