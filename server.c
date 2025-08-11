@@ -131,11 +131,10 @@ void signal_handle(int signum, siginfo_t *info, void *context)
 int	main(void)
 {
 	pid_t				pid;
-	struct sigaction sa;
+	struct sigaction	sa;
 
 	pid = getpid();
 	ft_printf("PID Server: %d\n", pid);
-
 	sa.sa_sigaction = signal_handle;
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
