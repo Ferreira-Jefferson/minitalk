@@ -3,129 +3,86 @@
 #include <unistd.h>
 #include <stdio.h>
 
-static size_t ft_get_length_bits(int signum, size_t size)
+static int ft_handle_pid_client(int signum)
 {
-	static int		command_size[6];
-	unsigned char	length;
-	size_t			i;
+	static int pid_vet[24];
+	static int index;
+	int pid_client;
 
-	length = 0;
-	if (size < 6)
-		command_size[size++] = (signum == SIGUSR2);
-	if (size == 6)
+	if (!signum)
 	{
-		i = 0;
-		while (i < 6)
-		{
-			length |= (command_size[i] & 1) << i;
-			i++;
-		}
+		index = 0;
+		return (0);
 	}
-	return (length);
+	pid_vet[index++] = (signum == SIGUSR2);
+	if (index == 24)
+	{
+		pid_client = 0;
+		while (index--)
+		{
+			pid_client <<= 1;
+			pid_client |= (pid_vet[index] & 1);
+		}
+		return (pid_client);
+	}
+	return (0);
 }
 
-static int *ft_prepare_message(int signum, size_t length, size_t index)
+static int ft_handle_message(int signum, int index)
 {
-	static int		*message;
-	static size_t	current_length;
+	static int mess_vet[8];
+	static int message;
 
-	if (current_length != length)
-		message = ft_to_free((void**)&message);
-	if (!message)
+	if (index == 0)
+		message = 0;
+	mess_vet[index] = (signum == SIGUSR2);
+	if (index == 7)
 	{
-		current_length = length;
-		message = (int *) ft_calloc(length, sizeof(int));
-		if (!message)
-			return (NULL);
-	}
-	message[index] = (signum == SIGUSR2);
-	if ((index + 1) == length)
+		message = 0;
+		while (index >= 0)
+		{
+			message <<= 1;
+			message |= (mess_vet[index] & 1);
+			index--;
+		}
 		return (message);
-	return (NULL);
-}
-
-static unsigned int ft_create_value(int *message, size_t length)
-{
-	unsigned int	number;
-	size_t			i;
-
-	number = 0;
-	i = 0;
-	while (i < length)
-	{
-		number |= (message[i] & 1) << i;
-		i++;
 	}
-	return (number);
+	return (0);
 }
-/*
-static void ft_create_message(size_t *length, int **bit_message, unsigned int *pid_client, char *message, size_t *mess_index)
+
+int ft_print_message(int message)
 {
-	unsigned int		value;
-
-	value = ft_create_value(*bit_message, *length);
-	if (*pid_client == 0)
-		*pid_client = value;
-	else
-	{
-		if (value == '\0')
-		{
-			message[*mess_index] = '\0';
-			ft_printf("%s", *message);
-			kill(*pid_client, SIGUSR1);
-			*mess_index = 0;
-			*pid_client = 0;
-		}
-		else
-		{
-			(*message)[mess_index] = (char)value;
-			(*mess_index)++;
-		}
-	}
+	if (message == '\0')
+		return (0);
+	ft_printf("%c", message);
+	return (-1);
 }
 
-*/
 void signal_handle(int signum, siginfo_t *info, void *context)
 {
 	(void) info;
 	(void) context;
-	static size_t		length;
-	static size_t		len;
-	static int			*bit_message;
-	static unsigned int	pid_client;
-	static char			message[1024];
-	static size_t		mess_index;
-	unsigned int		value;
+	static int pid_client;
+	static int message;
+	static int index;
 
-	if (len < 6 && length == 0)
+	if (!pid_client)
+		pid_client = ft_handle_pid_client(signum);
+	else
 	{
-		length = ft_get_length_bits(signum, len++);
-		return;
-	}
-	bit_message = ft_prepare_message(signum, length, len - 6);
-	len++;
-	;
-	if (bit_message)
-	{
-		value = ft_create_value(bit_message, length);
-		if (pid_client == 0)
-			pid_client = value;
-		else
+		message = ft_handle_message(signum, index++);
+		if (index == 8)
 		{
-			if (value == '\0')
+			if (!ft_print_message(message))
 			{
-				message[mess_index] = '\0';
-				ft_printf("%s", message);
 				kill(pid_client, SIGUSR1);
-				mess_index = 0;
 				pid_client = 0;
+				ft_handle_pid_client(0);
 			}
-			else
-				message[mess_index++] = (char)value;
+			index = 0;
+			message = 0;
 		}
-		len = 0;
-		length = 0;
-	}
+	}	
 }
 
 int	main(void)

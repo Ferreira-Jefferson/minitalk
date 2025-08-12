@@ -4,24 +4,23 @@
 #include <limits.h>
 #include <stdio.h>
 
-static void	ft_send_length_bits(pid_t server_pid, unsigned int size)
+static void	ft_send_pid_bits(pid_t server_pid, int pid_client)
 {
-	size_t	len;
-
-	len = 6;
+	size_t len = 24;
 	while (len--)
 	{
-		if (size % 2)
+		if (pid_client % 2)
 			kill(server_pid, SIGUSR2);
 		else
 			kill(server_pid, SIGUSR1);
-		size >>= 1;
-		usleep(200);
+		pid_client >>= 1;
+		usleep(50);
 	}
 }
 
-static void	ft_send_message_bits(pid_t server_pid, unsigned int message, size_t len)
+static void	ft_send_message_bits(pid_t server_pid, unsigned int message)
 {
+	size_t len = 8;
 	while (len--)
 	{
 		if (message % 2)
@@ -29,27 +28,19 @@ static void	ft_send_message_bits(pid_t server_pid, unsigned int message, size_t 
 		else
 			kill(server_pid, SIGUSR1);
 		message >>= 1;
-		usleep(200);
+		usleep(900);
 	}
 }
 
 static void	ft_send_message(unsigned int server_pid, unsigned int client_pid, char *message)
 {
-	size_t	size;
-
-	size = ft_binary_len(client_pid);
-	ft_send_length_bits(server_pid, size);
-	ft_send_message_bits(server_pid, client_pid, size);
+	ft_send_pid_bits(server_pid, client_pid);
 	while (*message)
 	{
-		size = ft_binary_len(*message);
-		ft_send_length_bits(server_pid, size);
-		ft_send_message_bits(server_pid, *message, size);
+		ft_send_message_bits(server_pid, *message);
 		message++;
 	}
-	size = ft_binary_len('\0');
-	ft_send_length_bits(server_pid, size);
-	ft_send_message_bits(server_pid, '\0', size);
+	ft_send_message_bits(server_pid, '\0');
 }
 
 void handle_signal(int signal, siginfo_t *info, void *content)

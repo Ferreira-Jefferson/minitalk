@@ -6,3 +6,5 @@ server
 client.o
 server.o
 libft
+.nfs*
+./minitalk-Tester
