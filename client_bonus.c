@@ -2,6 +2,7 @@
 #include <signal.h>
 #include <unistd.h>
 #include <limits.h>
+#include <stdio.h>
 
 static void	ft_send_pid_bits(pid_t server_pid, int pid_client)
 {
@@ -13,14 +14,13 @@ static void	ft_send_pid_bits(pid_t server_pid, int pid_client)
 		else
 			kill(server_pid, SIGUSR1);
 		pid_client >>= 1;
-		usleep(100);
+		usleep(50);
 	}
 }
 
 static void	ft_send_message_bits(pid_t server_pid, unsigned int message)
 {
-	size_t len;
-	len = 8;
+	size_t len = 8;
 	while (len--)
 	{
 		if (message % 2)
@@ -28,26 +28,19 @@ static void	ft_send_message_bits(pid_t server_pid, unsigned int message)
 		else
 			kill(server_pid, SIGUSR1);
 		message >>= 1;
-		usleep(800);
+		usleep(900);
 	}
 }
 
-static void	ft_send_message(unsigned int client_pid, unsigned int server_pid, char *message)
+static void	ft_send_message(unsigned int server_pid, unsigned int client_pid, char *message)
 {
-	static unsigned int server_pid_aux;
-	static char *message_aux;
-
-	if (client_pid)
+	ft_send_pid_bits(server_pid, client_pid);
+	while (*message)
 	{
-		server_pid_aux = server_pid;
-		message_aux = message;
-		ft_send_pid_bits(server_pid_aux, client_pid);
+		ft_send_message_bits(server_pid, *message);
+		message++;
 	}
-	usleep(100);
-	if (*message_aux)
-		ft_send_message_bits(server_pid_aux, *message_aux++);
-	else
-		ft_send_message_bits(server_pid_aux, '\0');
+	ft_send_message_bits(server_pid, '\0');
 }
 
 void handle_signal(int signal, siginfo_t *info, void *content)
@@ -55,12 +48,7 @@ void handle_signal(int signal, siginfo_t *info, void *content)
 	(void) content;
 	(void) info;
 
-	if (signal == SIGUSR2)
-	{
-		usleep(10000);
-		ft_send_message(0, 0, NULL);
-	}
-	else if(signal == SIGUSR1)
+	if (signal == SIGUSR1 || signal == SIGUSR2)
 	{
 		ft_printf("The server message was received.\n");
 		exit(0);
@@ -85,7 +73,7 @@ int main(int argc, char *argv[])
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
-	ft_send_message(pid_client, pid_server, argv[2]);
+	ft_send_message(pid_server, pid_client, argv[2]);
 	while (1)
 		pause();
 	return (0);

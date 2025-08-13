@@ -50,12 +50,11 @@ static int ft_handle_message(int signum, int index)
 	return (0);
 }
 
-int ft_print_message(int pid_client, int message)
+int ft_print_message(int message)
 {
 	if (message == '\0')
 		return (0);
 	ft_printf("%c", message);
-	kill(pid_client, SIGUSR2);
 	return (-1);
 }
 
@@ -74,7 +73,7 @@ void signal_handle(int signum, siginfo_t *info, void *context)
 		message = ft_handle_message(signum, index++);
 		if (index == 8)
 		{
-			if (!ft_print_message(pid_client, message))
+			if (!ft_print_message(message))
 			{
 				kill(pid_client, SIGUSR1);
 				pid_client = 0;
