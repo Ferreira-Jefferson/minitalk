@@ -3,6 +3,8 @@
 #include <unistd.h>
 #include <limits.h>
 
+volatile sig_atomic_t next = 1;
+
 static void	ft_send_pid_bits(pid_t server_pid, int pid_client)
 {
 	size_t len = 24;
@@ -28,39 +30,38 @@ static void	ft_send_message_bits(pid_t server_pid, unsigned int message)
 		else
 			kill(server_pid, SIGUSR1);
 		message >>= 1;
-		usleep(800);
+		usleep(500);
 	}
 }
 
 static void	ft_send_message(unsigned int client_pid, unsigned int server_pid, char *message)
 {
+	static unsigned int client_pid_aux;
 	static unsigned int server_pid_aux;
 	static char *message_aux;
 
-	if (client_pid)
+	if (!client_pid_aux)
 	{
+		client_pid_aux = client_pid;
 		server_pid_aux = server_pid;
 		message_aux = message;
 		ft_send_pid_bits(server_pid_aux, client_pid);
 	}
-	usleep(100);
 	if (*message_aux)
 		ft_send_message_bits(server_pid_aux, *message_aux++);
 	else
 		ft_send_message_bits(server_pid_aux, '\0');
 }
 
-void handle_signal(int signal, siginfo_t *info, void *content)
+void handle_next(int signal)
 {
-	(void) content;
-	(void) info;
-
 	if (signal == SIGUSR2)
-	{
-		usleep(10000);
-		ft_send_message(0, 0, NULL);
-	}
-	else if(signal == SIGUSR1)
+		next = 1;
+}
+
+void handle_exit(int signal)
+{
+	if (signal == SIGUSR1)
 	{
 		ft_printf("The server message was received.\n");
 		exit(0);
@@ -71,7 +72,6 @@ int main(int argc, char *argv[])
 {
 	pid_t				pid_client;
 	pid_t				pid_server;
-	struct sigaction	sa;
 
 	if (argc != 3)
 		return ft_printf("Expected: %s <PID_server> <message>\n", argv[0]);
@@ -80,13 +80,14 @@ int main(int argc, char *argv[])
 	pid_server = ft_atoi(argv[1]);
 	if (!pid_server)
 		return ft_printf("Invalid PID.\n");
-	sa.sa_sigaction = handle_signal;
-	sa.sa_flags = SA_SIGINFO;
-	sigemptyset(&sa.sa_mask);
-	sigaction(SIGUSR1, &sa, NULL);
-	sigaction(SIGUSR2, &sa, NULL);
-	ft_send_message(pid_client, pid_server, argv[2]);
+	
+	signal(SIGUSR1, handle_exit);
+	signal(SIGUSR2, handle_next);
+
 	while (1)
-		pause();
+	{
+		ft_send_message(pid_client, pid_server, argv[2]);
+		usleep(100);
+	}
 	return (0);
 }
