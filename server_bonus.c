@@ -3,100 +3,65 @@
 #include <unistd.h>
 #include <stdio.h>
 
-static int ft_handle_pid_client(int signum)
+pid_t	client_pid = 0;
+
+static int	ft_handle_message(int signum)
 {
-	static int pid_vet[24];
-	static int index;
-	int pid_client;
+	static int	mess_vet[8];
+	static int	message;
+	static int	index;
 
-	if (!signum)
-	{
-		index = 0;
-		return (0);
-	}
-	pid_vet[index++] = (signum == SIGUSR2);
-	if (index == 24)
-	{
-		pid_client = 0;
-		while (index--)
-		{
-			pid_client <<= 1;
-			pid_client |= (pid_vet[index] & 1);
-		}
-		return (pid_client);
-	}
-	return (0);
-}
-
-static int ft_handle_message(int signum, int index)
-{
-	static int mess_vet[8];
-	static int message;
-
-	if (index == 0)
-		message = 0;
-	mess_vet[index] = (signum == SIGUSR2);
-	if (index == 7)
+	mess_vet[index++] = (signum == SIGUSR2);
+	if (index == 8)
 	{
 		message = 0;
-		while (index >= 0)
+		while (index > 0)
 		{
+			index--;
 			message <<= 1;
 			message |= (mess_vet[index] & 1);
-			index--;
 		}
+		if (message == '\0')
+			kill(client_pid, SIGUSR1);
 		return (message);
 	}
+	kill(client_pid, SIGUSR2);
 	return (0);
 }
 
-int ft_print_message(int message)
+void	signal_handle(int signum, siginfo_t *info, void *context)
 {
-	if (message == '\0')
-		return (0);
-	ft_printf("%c", message);
-	return (-1);
-}
+	static int	message;
 
-void signal_handle(int signum, siginfo_t *info, void *context)
-{
-	(void) info;
 	(void) context;
-	static int pid_client;
-	static int message;
-	static int index;
-
-	if (!pid_client)
-		pid_client = ft_handle_pid_client(signum);
-	else
+	client_pid = info->si_pid;
+	message = ft_handle_message(signum);
+	if (message)
 	{
-		message = ft_handle_message(signum, index++);
-		if (index == 8)
-		{
-			if (!ft_print_message(message))
-			{
-				kill(pid_client, SIGUSR1);
-				pid_client = 0;
-				ft_handle_pid_client(0);
-			}
-			index = 0;
-			message = 0;
-		}
-	}	
+		ft_printf("%c", message);
+		message = 0;
+		kill(client_pid, SIGUSR2);
+	}
 }
 
-int	main(void)
+void	setup_signal_handlers(void)
 {
-	pid_t				pid;
 	struct sigaction	sa;
 
-	pid = getpid();
-	ft_printf("PID Server: %d\n", pid);
 	sa.sa_sigaction = signal_handle;
 	sa.sa_flags = SA_SIGINFO;
 	sigemptyset(&sa.sa_mask);
 	sigaction(SIGUSR1, &sa, NULL);
 	sigaction(SIGUSR2, &sa, NULL);
+}
+
+int	main(void)
+{
+	pid_t	pid;
+
+	setup_signal_handlers();
+	pid = getpid();
+	ft_printf("PID Server: %d\n", pid);
 	while (1)
 		pause();
 	return (0);

@@ -3,8 +3,9 @@ a.out
 test*
 client
 server
-client.o
-server.o
+*.o
 libft
 .nfs*
 ./minitalk-Tester
+client
+server

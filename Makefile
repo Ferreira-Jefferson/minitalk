@@ -6,7 +6,7 @@
 #    By: jtertuli <jtertuli@student.42.fr>          +#+  +:+       +#+         #
 #                                                 +#+#+#+#+#+   +#+            #
 #    Created: 2025/08/07 19:41:00 by jtertuli          #+#    #+#              #
-#    Updated: 2025/08/10 08:17:42 by jtertuli         ###   ########.fr        #
+#    Updated: 2025/08/15 14:37:25 by jtertuli         ###   ########.fr        #
 #                                                                              #
 # **************************************************************************** #
 
@@ -23,8 +23,8 @@ LIBFT_DIR = libft
 LIBFT = $(LIBFT_DIR)/libft.a
 
 # Source files
-CLIENT_SRC = client.c
-SERVER_SRC = server.c
+CLIENT_SRC := client.c\
+SERVER_SRC = server.c\
 
 # Object files
 CLIENT_OBJ = $(CLIENT_SRC:.c=.o)
@@ -53,6 +53,9 @@ $(CLIENT_OBJ): $(CLIENT_SRC)
 $(SERVER_OBJ): $(SERVER_SRC)
 	$(CC) $(CFLAGS) -c $(SERVER_SRC) -I$(LIBFT_DIR)
 
+bonus:
+	@$(MAKE) CLIENT_SRC=client_bonus.c SERVER_SRC=server_bonus.c
+	
 clean:
 	rm -f $(CLIENT_OBJ) $(SERVER_OBJ)
 	$(MAKE) -C $(LIBFT_DIR) clean
